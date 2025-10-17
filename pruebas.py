@@ -327,22 +327,60 @@ def update_template():
         fines_y_frase = fines_para_parte
 
     # Construir el texto final
+    secciones_resuelvo = [
+        (
+            "Hacer lugar al pedido y ordenar el allanamiento "
+            f"{inmueble_text} en el petitorio del día de la fecha, al solo efecto de "
+            f"{fines_y_frase}, todo en relación al Expediente Electrónico Nº {expediente} "
+            f"labrado por ante {tramite}."
+        )
+    ]
+
     if apertura_compulsiva_var.get() == "Sí":
-        template_text = f"""
+        secciones_resuelvo.append(
+            "Autorizar la APERTURA de medios de almacenamiento de los dispositivos que se "
+            "encuentren en el lugar (celulares, computadoras, notebook, tablets o dispositivos "
+            "de almacenamiento de información digital informática, etc.), quedando asimismo "
+            "autorizados a relevar la información de archivos existentes y, en su caso, a efectuar "
+            "el backup de su contenido, interceptación de correo electrónico, redes sociales/" 
+            "conversaciones (mensajes y mensajería instantánea), billeteras electrónicas y cuentas "
+            "de almacenamiento en línea en tiempo real y el contenido que pudiera existir en éstas; "
+            "procediendo a la descarga de datos vinculados a la causa y, en caso que no fuera factible, "
+            "a cambiar la contraseña de acceso por el lapso de quince días hábiles, en procura de "
+            "determinar la existencia de material relevante, y en caso positivo proceder al secuestro "
+            "de los dispositivos a los fines de continuar su análisis en Policía Judicial si correspondiere, "
+            "como así también al secuestro de todo elemento relacionado a la investigación, dejando "
+            "constancia en acta."
+        )
+        secciones_resuelvo.append(
+            "Para el caso de que se efectúe el secuestro de teléfonos celulares y/o dispositivos con "
+            "conexión a Internet, se autoriza la previsualización de los mismos y, si requirieren para "
+            "su apertura el uso de huella dactilar o la exhibición del rostro por parte del usuario, se "
+            "autoriza su apertura compulsiva —en caso de negativa—, ya sea para su análisis en el "
+            "lugar (del contenido almacenado y de las aplicaciones accesibles) o para quitar medidas de "
+            "seguridad y proceder a su posterior examen en la oficina técnica del Ministerio Público Fiscal; "
+            "ello dentro de los límites del Auto n.º 332 de fecha 08/09/2020 de la Excma. Cámara de Acusación "
+            "de esta ciudad, en “Quipildor, Armando Andrés…”, Expte. SACM n.º 8934647."
+        )
+
+    secciones_resuelvo.append(
+        f"Autorizar al {comisionados}, para que, con personal a sus órdenes, en el término de {termino}, "
+        f"a contar a partir de las {hora} horas del día de la fecha, {habilitacion_texto} a cumplimentarlo, "
+        "quedando facultado para hacer uso de la fuerza pública, en caso de necesidad."
+    )
+    secciones_resuelvo.append(
+        "Hecho, vuelva a la Fiscalía requirente, sirviendo el presente de atenta nota de remisión y estilo."
+    )
+
+    romanos = ["I", "II", "III", "IV", "V", "VI", "VII"]
+    resolucion_texto = "\n".join(
+        f"    {romanos[idx]}) {texto}" for idx, texto in enumerate(secciones_resuelvo)
+    )
+
+    template_text = f"""
     Córdoba, {fecha}.
     {inicio_texto}, que tengo a la vista -fundamentalmente, {denuncia}- encontrándose reunidos los recaudos de ley (arts. 45 de la Const. Pcial.; 203, 204, 210 y concordantes del C.P.P.); RESUELVO:
-    I) Hacer lugar al pedido y ordenar el allanamiento {inmueble_text} en el petitorio del día de la fecha, al solo efecto de {fines_y_frase}, todo en relación al Expediente Electrónico Nº {expediente} labrado por ante {tramite}.
-    II) Autorizar la APERTURA de medios de almacenamiento de los dispositivos que se encuentren en el lugar (celulares, computadoras, notebook, tablets o dispositivos de almacenamiento de información digital informática, etc.), quedando asimismo autorizados a relevar la información de archivos existentes y, en su caso, a efectuar el backup de su contenido, interceptación de correo electrónico, redes sociales/conversaciones (mensajes y mensajería instantánea), billeteras electrónicas y cuentas de almacenamiento en línea en tiempo real y el contenido que pudiera existir en éstas; procediendo a la descarga de datos vinculados a la causa y, en caso que no fuera factible, a cambiar la contraseña de acceso por el lapso de quince días hábiles, en procura de determinar la existencia de material relevante, y en caso positivo proceder al secuestro de los dispositivos a los fines de continuar su análisis en Policía Judicial si correspondiere, como así también al secuestro de todo elemento relacionado a la investigación, dejando constancia en acta.
-    III) Para el caso de que se efectúe el secuestro de teléfonos celulares y/o dispositivos con conexión a Internet, se autoriza la previsualización de los mismos y, si requirieren para su apertura el uso de huella dactilar o la exhibición del rostro por parte del usuario, se autoriza su apertura compulsiva —en caso de negativa—, ya sea para su análisis en el lugar (del contenido almacenado y de las aplicaciones accesibles) o para quitar medidas de seguridad y proceder a su posterior examen en la oficina técnica del Ministerio Público Fiscal; ello dentro de los límites del Auto n.º 332 de fecha 08/09/2020 de la Excma. Cámara de Acusación de esta ciudad, en “Quipildor, Armando Andrés…”, Expte. SACM n.º 8934647.
-    IV) Autorizar al {comisionados}, para que, con personal a sus órdenes, en el término de {termino}, a contar a partir de las {hora} horas del día de la fecha, {habilitacion_texto} a cumplimentarlo, quedando facultado para hacer uso de la fuerza pública, en caso de necesidad. III) Hecho, vuelva a la Fiscalía requirente, sirviendo el presente de atenta nota de remisión y estilo.
-    """
-    else:
-        template_text = f"""
-    Córdoba, {fecha}.
-    {inicio_texto}, que tengo a la vista -fundamentalmente, {denuncia}- encontrándose reunidos los recaudos de ley (arts. 45 de la Const. Pcial.; 203, 204, 210 y concordantes del C.P.P.); RESUELVO:
-    I) Hacer lugar al pedido y ordenar el allanamiento {inmueble_text} en el petitorio del día de la fecha, al solo efecto de {fines_y_frase}, todo en relación al Expediente Electrónico Nº {expediente} labrado por ante {tramite}.
-    II) Autorizar al {comisionados}, para que, con personal a sus órdenes, en el término de {termino}, a contar a partir de las {hora} horas del día de la fecha, {habilitacion_texto} a cumplimentarlo, quedando facultado para hacer uso de la fuerza pública, en caso de necesidad.
-    III) Hecho, vuelva a la Fiscalía requirente, sirviendo el presente de atenta nota de remisión y estilo.
+{resolucion_texto}
     """
     # Mostrar en el widget
     template_display.config(state=tk.NORMAL)
@@ -425,7 +463,7 @@ def update_template():
         start_index = template_display.search(fines_y_frase, '1.0', tk.END)
         if start_index:
             end_index = f"{start_index}+{len(fines_y_frase)}c"
-            template_display.tag_add(start_index, end_index)
+            template_display.tag_add('bold', start_index, end_index)
     
     if fines_y_frase:
         start_fines = template_display.search(fines_y_frase, "1.0", tk.END)
@@ -471,8 +509,8 @@ def update_template():
         template_display.tag_add('bold', pos, end_pos)
         start_index = end_pos
 
-    # Numerales en negrita (I), II), III), IV))
-    for item in ["I)", "II)", "III)", "IV)"]:
+    # Numerales en negrita (I) a V)
+    for item in ["I)", "II)", "III)", "IV)", "V)"]:
         start_index = '1.0'
         while True:
             pos = template_display.search(item, start_index, tk.END)
@@ -627,7 +665,7 @@ Saluda a Ud. Atte.
     start_index = domicilio_displays[index].search(saludo_phrase, '1.0', tk.END)
     if start_index:
         end_index = f"{start_index}+{len(saludo_phrase)}c"
-        domicilio_displays[index].tag_add(start_index, end_index)
+        domicilio_displays[index].tag_add('bold', start_index, end_index)
 
     tribunal_phrase = tribunal
     start_index = domicilio_displays[index].search(tribunal_phrase, '1.0', tk.END)
@@ -661,7 +699,7 @@ Saluda a Ud. Atte.
     start_index = domicilio_displays[index].search(fines_phrase, '1.0', tk.END)
     if start_index:
         end_index = f"{start_index}+{len(fines_phrase)}c"
-        domicilio_displays[index].tag_add(start_index, end_index)
+        domicilio_displays[index].tag_add('bold', start_index, end_index)
 
     # Resaltar determinadas palabras dentro de los fines
     start_fines = domicilio_displays[index].search(fines_phrase, "1.0", tk.END)
@@ -705,7 +743,7 @@ Saluda a Ud. Atte.
     start_index = domicilio_displays[index].search("Saluda a Ud. Atte.", '1.0', tk.END)
     if start_index:
         end_index = f"{start_index}+{len('Saluda a Ud. Atte.')}c"
-        domicilio_displays[index].tag_add(start_index, end_index)
+        domicilio_displays[index].tag_add('bold', start_index, end_index)
 
     body_start = domicilio_displays[index].search(lines_encabezado[-1], '1.0', tk.END)
     body_end = domicilio_displays[index].search("Saluda a Ud. Atte.", body_start, tk.END)
