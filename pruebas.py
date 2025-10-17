@@ -19,6 +19,13 @@ entry_numero_orden_inicial = None
 texto_detencion = ""  # Variable global para el texto de detención
 crppa_active = False  # Variable global para el estado del botón CRPPA
 
+display_font_size = 13   # igual a tu tamaño actual de visualización
+zoom_base = 13           # 100%
+
+base_font = None
+base_font_bold = None
+base_font_ital = None
+
 def on_mousewheel(event):
     if platform.system() == 'Windows':
         left_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
@@ -141,30 +148,62 @@ def obtener_fecha_formato_corto():
 
     return f"{dia} de {mes} de {año}"
 
+def initialize_fonts():
+    global base_font, base_font_bold, base_font_ital
+    if base_font is None:
+        base_font = font.Font(family="Times New Roman", size=display_font_size)
+    if base_font_bold is None:
+        base_font_bold = font.Font(family="Times New Roman", size=display_font_size, weight='bold')
+    if base_font_ital is None:
+        base_font_ital = font.Font(family="Times New Roman", size=display_font_size, slant='italic')
+
+
 def create_tags(text_widget):
-    # Definir fuente de estilo
-    base_font = font.Font(family='Times New Roman', size=13)
-    bold_font = font.Font(family='Times New Roman', size=13, weight='bold')
-    italic_font = font.Font(family='Times New Roman', size=13, slant='italic')
-    
-    # Configurar etiquetas
-    text_widget.tag_configure('bold', font=bold_font)
-    text_widget.tag_configure('underline', underline=1)
-    text_widget.tag_configure('center', justify='center')
-    text_widget.tag_configure('right_align', justify='right')
-    text_widget.tag_configure('justified', justify='left')
-    text_widget.tag_configure('italic', font=italic_font)
-    
-    # Calcular un interlineado de 1,5 líneas
-    font_height = base_font.metrics('linespace')  # Altura de la línea en píxeles
-    # Para 1,5 líneas: 0,5 * font_height adicionales entre cada línea
+    initialize_fonts()
+    text_widget.tag_configure('bold', font=base_font_bold)
+    text_widget.tag_configure('underline', underline=1, font=base_font)
+    text_widget.tag_configure('center', justify='center', font=base_font)
+    text_widget.tag_configure('right_align', justify='right', font=base_font)
+    text_widget.tag_configure('justified', justify='left', font=base_font)
+    text_widget.tag_configure('italic', font=base_font_ital)
+
+    font_height = base_font.metrics('linespace')
     interline_spacing = int(font_height * 0.5)
-    
-    # Configurar los tres espaciados iguales
-    text_widget.tag_configure('spacing', 
-                              spacing1=interline_spacing,  # Espacio antes del párrafo
-                              spacing2=interline_spacing,  # Espacio entre líneas del párrafo
-                              spacing3=interline_spacing)  # Espacio después del párrafo
+    text_widget.tag_configure('spacing',
+                              spacing1=interline_spacing,
+                              spacing2=interline_spacing,
+                              spacing3=interline_spacing)
+
+
+def actualizar_tamano_fuente(nuevo_tamano):
+    global display_font_size
+    initialize_fonts()
+    display_font_size = int(max(8, nuevo_tamano))
+    base_font.config(size=display_font_size)
+    base_font_bold.config(size=display_font_size)
+    base_font_ital.config(size=display_font_size)
+
+    if 'template_display' in globals():
+        template_display.config(state=tk.NORMAL, font=base_font)
+        template_display.update_idletasks()
+        template_display.config(state=tk.DISABLED)
+
+    for txt in domicilio_displays:
+        txt.config(state=tk.NORMAL, font=base_font)
+        txt.update_idletasks()
+        txt.config(state=tk.DISABLED)
+
+    if 'zoom_label' in globals() and zoom_label.winfo_exists():
+        porcentaje = int((display_font_size / zoom_base) * 100)
+        zoom_label.config(text=f"{porcentaje}%")
+        zoom_label.after(1200, lambda: zoom_label.config(text=""))
+
+
+def on_ctrl_mousewheel(event):
+    if event.state & 0x0004:
+        delta = 1 if event.delta > 0 else -1
+        actualizar_tamano_fuente(display_font_size + delta)
+        return "break"
 
 def update_detencion():
     if detencion_var.get() == "con":
@@ -288,9 +327,22 @@ def update_template():
         fines_y_frase = fines_para_parte
 
     # Construir el texto final
-    template_text = f"""
+    if apertura_compulsiva_var.get() == "Sí":
+        template_text = f"""
     Córdoba, {fecha}.
-    {inicio_texto}, que tengo a la vista -fundamentalmente, {denuncia}- encontrándose reunidos los recaudos de ley (arts. 45 de la Const. Pcial.; 203, 204, 210 y concordantes del C.P.P.); RESUELVO: I) Hacer lugar al pedido y ordenar el allanamiento {inmueble_text} en el petitorio del día de la fecha, al solo efecto de {fines_y_frase}, todo en relación al Expediente Electrónico Nº {expediente} labrado por ante {tramite}. II) Autorizar al {comisionados}, para que, con personal a sus órdenes, en el término de {termino}, a contar a partir de las {hora} horas del día de la fecha, {habilitacion_texto} a cumplimentarlo, quedando facultado para hacer uso de la fuerza pública, en caso de necesidad. III) Hecho, vuelva a la Fiscalía requirente, sirviendo el presente de atenta nota de remisión y estilo.
+    {inicio_texto}, que tengo a la vista -fundamentalmente, {denuncia}- encontrándose reunidos los recaudos de ley (arts. 45 de la Const. Pcial.; 203, 204, 210 y concordantes del C.P.P.); RESUELVO:
+    I) Hacer lugar al pedido y ordenar el allanamiento {inmueble_text} en el petitorio del día de la fecha, al solo efecto de {fines_y_frase}, todo en relación al Expediente Electrónico Nº {expediente} labrado por ante {tramite}.
+    II) Autorizar la APERTURA de medios de almacenamiento de los dispositivos que se encuentren en el lugar (celulares, computadoras, notebook, tablets o dispositivos de almacenamiento de información digital informática, etc.), quedando asimismo autorizados a relevar la información de archivos existentes y, en su caso, a efectuar el backup de su contenido, interceptación de correo electrónico, redes sociales/conversaciones (mensajes y mensajería instantánea), billeteras electrónicas y cuentas de almacenamiento en línea en tiempo real y el contenido que pudiera existir en éstas; procediendo a la descarga de datos vinculados a la causa y, en caso que no fuera factible, a cambiar la contraseña de acceso por el lapso de quince días hábiles, en procura de determinar la existencia de material relevante, y en caso positivo proceder al secuestro de los dispositivos a los fines de continuar su análisis en Policía Judicial si correspondiere, como así también al secuestro de todo elemento relacionado a la investigación, dejando constancia en acta.
+    III) Para el caso de que se efectúe el secuestro de teléfonos celulares y/o dispositivos con conexión a Internet, se autoriza la previsualización de los mismos y, si requirieren para su apertura el uso de huella dactilar o la exhibición del rostro por parte del usuario, se autoriza su apertura compulsiva —en caso de negativa—, ya sea para su análisis en el lugar (del contenido almacenado y de las aplicaciones accesibles) o para quitar medidas de seguridad y proceder a su posterior examen en la oficina técnica del Ministerio Público Fiscal; ello dentro de los límites del Auto n.º 332 de fecha 08/09/2020 de la Excma. Cámara de Acusación de esta ciudad, en “Quipildor, Armando Andrés…”, Expte. SACM n.º 8934647.
+    IV) Autorizar al {comisionados}, para que, con personal a sus órdenes, en el término de {termino}, a contar a partir de las {hora} horas del día de la fecha, {habilitacion_texto} a cumplimentarlo, quedando facultado para hacer uso de la fuerza pública, en caso de necesidad. III) Hecho, vuelva a la Fiscalía requirente, sirviendo el presente de atenta nota de remisión y estilo.
+    """
+    else:
+        template_text = f"""
+    Córdoba, {fecha}.
+    {inicio_texto}, que tengo a la vista -fundamentalmente, {denuncia}- encontrándose reunidos los recaudos de ley (arts. 45 de la Const. Pcial.; 203, 204, 210 y concordantes del C.P.P.); RESUELVO:
+    I) Hacer lugar al pedido y ordenar el allanamiento {inmueble_text} en el petitorio del día de la fecha, al solo efecto de {fines_y_frase}, todo en relación al Expediente Electrónico Nº {expediente} labrado por ante {tramite}.
+    II) Autorizar al {comisionados}, para que, con personal a sus órdenes, en el término de {termino}, a contar a partir de las {hora} horas del día de la fecha, {habilitacion_texto} a cumplimentarlo, quedando facultado para hacer uso de la fuerza pública, en caso de necesidad.
+    III) Hecho, vuelva a la Fiscalía requirente, sirviendo el presente de atenta nota de remisión y estilo.
     """
     # Mostrar en el widget
     template_display.config(state=tk.NORMAL)
@@ -298,6 +350,12 @@ def update_template():
     template_text = "\n".join(line.lstrip() for line in template_text.splitlines())
     template_display.insert(tk.END, template_text)
     template_display.tag_add('spacing', '1.0', 'end')
+
+    pos = template_display.search("APERTURA", "1.0", tk.END)
+    while pos:
+        fin = f"{pos}+{len('APERTURA')}c"
+        template_display.tag_add('bold', pos, fin)
+        pos = template_display.search("APERTURA", fin, tk.END)
 
     # Resaltar Unidad Judicial o CRPPA
     if crppa_active:
@@ -413,8 +471,8 @@ def update_template():
         template_display.tag_add('bold', pos, end_pos)
         start_index = end_pos
 
-    # Numerales en negrita (I), II), III))
-    for item in ["I)", "II)", "III)"]:
+    # Numerales en negrita (I), II), III), IV))
+    for item in ["I)", "II)", "III)", "IV)"]:
         start_index = '1.0'
         while True:
             pos = template_display.search(item, start_index, tk.END)
@@ -502,7 +560,21 @@ def update_domicilio_template(index):
     else:
         adscripto_frase = "adscriptos a la Policía de la Provincia de Córdoba"
 
-    updated_template = f"""
+    if apertura_compulsiva_var.get() == "Sí":
+        updated_template = f"""
+Córdoba, {fecha}
+
+{encabezado_var.get()}
+S/D
+
+     Comunico a Ud. que por resolución de este {tribunal}, se ha resuelto autorizar al {comisionados}, {adscripto_frase}, con personal subordinado y de apoyo a sus órdenes, para que en el día de la fecha a partir de las {hora} horas y por el término de {termino}, {habilitacion} habilitación de horas, proceda al allanamiento del {domicilio}. El allanamiento solicitado se autoriza a los fines de {fines_para_parte}; y a la APERTURA de medios de almacenamiento de los dispositivos que se encuentren en el lugar (celulares, computadoras, notebook, tablets o dispositivos de almacenamiento de información digital informática, etc.) quedando asimismo autorizados a relevar la información de archivos existentes y en su caso a efectuar el backup de su contenido, interceptación de correo electrónico, redes sociales conversaciones (mensajes y mensajería instantánea), billeteras electrónicas y cuentas de almacenamiento en línea en tiempo real y el contenido que pudiera existir en éstas; procediendo a la descarga de datos vinculados a la causa y en caso que no fuera factible, proceder a cambiar la contraseña de acceso por el lapso de quince días hábiles, en procura de determinar la existencia de material relevante y, en caso positivo, proceder al secuestro de los dispositivos a los fines de continuar su análisis en Policía Judicial si correspondiere, como así también al secuestro de todo elemento relacionado a la presente investigación, dejando constancia en acta. Para el caso de que se efectúe el secuestro de teléfonos celulares y/o dispositivos con conexión a Internet, se ha autorizado la previsualización de los mismos y, si estos requirieren para su apertura el uso de huella dactilar o la exhibición del rostro por parte del usuario, se autoriza su apertura compulsiva —en caso de negativa—, ya sea para llevar a cabo su análisis en el lugar del secuestro (tanto del contenido almacenado como de las aplicaciones a las que se pueda acceder) o para quitar las medidas de seguridad propias del móvil y de dicha manera proceder a su posterior examen a través de la oficina técnica del Ministerio Público Fiscal; ello dentro de los límites establecidos por la Excma. Cámara de Acusación de esta ciudad, en “Quipildor, Armando Andrés…”, Expte. SACM n.º 8934647, Auto n.º 332 de fecha 08/09/2020. Todo en relación al Expediente Electrónico Nº {expediente} el que tramita por ante {tramite}.
+Se deberá comunicar el resultado del mismo a este Juzgado de Control y a la Fiscalía interviniente, dentro del término de veinticuatro horas, citando orden judicial {serie_orden} - {numero_orden}.  
+Queda facultado para hacer uso de la fuerza pública en la medida de su estricta necesidad.  
+Si no se realiza el procedimiento o el mismo arroja resultado negativo, se devolverá inmediatamente la presente orden a la Fiscalía de Instrucción interviniente.  
+Saluda a Ud. Atte.
+"""
+    else:
+        updated_template = f"""
 Córdoba, {fecha}
 
 {encabezado_var.get()}
@@ -519,6 +591,12 @@ Saluda a Ud. Atte.
     domicilio_displays[index].delete(1.0, tk.END)
     domicilio_displays[index].insert(tk.END, updated_template)
     domicilio_displays[index].tag_add('spacing', '1.0', 'end')
+
+    pos = domicilio_displays[index].search("APERTURA", '1.0', tk.END)
+    while pos:
+        fin = f"{pos}+{len('APERTURA')}c"
+        domicilio_displays[index].tag_add('bold', pos, fin)
+        pos = domicilio_displays[index].search("APERTURA", fin, tk.END)
 
     start_index = domicilio_displays[index].search(f"Córdoba, {fecha}", '1.0', tk.END)
     if start_index:
@@ -576,7 +654,10 @@ Saluda a Ud. Atte.
         domicilio_displays[index].tag_add('underline', start_index, end_index)
 
     # Ajuste de la frase a buscar según el texto actual
-    fines_phrase = f"al solo efecto de {fines_para_parte}"
+    if apertura_compulsiva_var.get() == "Sí":
+        fines_phrase = f"a los fines de {fines_para_parte}"
+    else:
+        fines_phrase = f"al solo efecto de {fines_para_parte}"
     start_index = domicilio_displays[index].search(fines_phrase, '1.0', tk.END)
     if start_index:
         end_index = f"{start_index}+{len(fines_phrase)}c"
@@ -646,13 +727,15 @@ def agregar_domicilio():
     new_entry.bind("<KeyRelease>", lambda e: (update_template(), validar_campos()))
     new_tab = tk.Frame(notebook)
     notebook.add(new_tab, text=f"Domicilio {domicilio_num}")
-    new_tab_display = tk.Text(new_tab, wrap=tk.WORD, font=("Times New Roman", 13))
+    initialize_fonts()
+    new_tab_display = tk.Text(new_tab, wrap=tk.WORD, font=base_font)
     new_tab_display.pack(fill=tk.BOTH, expand=True)
     create_tags(new_tab_display)
+    new_tab_display.bind("<Control-MouseWheel>", on_ctrl_mousewheel)
     initial_template = f"""
 Córdoba, [fecha]
 
-AL SEÑOR 
+AL SEÑOR
 JEFE DE LA POLICÍA DE LA
 PROVINCIA DE CÓRDOBA
 S__________/___________D
@@ -680,20 +763,23 @@ def reubicar_elementos(start_row):
     label_detencion.grid(row=new_row + 2, column=0, sticky="w")
     detencion_sin.grid(row=new_row + 2, column=1, sticky="w")
     detencion_con.grid(row=new_row + 2, column=1, sticky="w", padx=100)
-    label_comisionados.grid(row=new_row + 3, column=0, sticky="w")
-    entry_comisionados.grid(row=new_row + 3, column=1, sticky="ew")
-    procesar_comisionados_button.grid(row=new_row + 4, column=1, sticky="ew")
-    label_hora.grid(row=new_row + 5, column=0, sticky="w")
-    combobox_hora.grid(row=new_row + 5, column=1, sticky="ew")
-    label_habilitacion.grid(row=new_row + 6, column=0, sticky="w")
-    sin_horas_button.grid(row=new_row + 6, column=1, sticky="w")
-    con_horas_button.grid(row=new_row + 6, column=1, sticky="w", padx=100)
-    label_termino.grid(row=new_row + 7, column=0, sticky="w")
-    termino_combobox.grid(row=new_row + 7, column=1, sticky="ew")
-    label_orden.grid(row=new_row + 8, column=0, sticky="w")
-    frame_orden.grid(row=new_row + 8, column=1, sticky="ew")
-    label_encabezado.grid(row=new_row + 9, column=0, sticky="w")
-    encabezado_combo.grid(row=new_row + 9, column=1, sticky="ew")
+    label_apertura_compulsiva.grid(row=new_row + 3, column=0, sticky="w")
+    apertura_no.grid(row=new_row + 3, column=1, sticky="w")
+    apertura_si.grid(row=new_row + 3, column=1, sticky="w", padx=100)
+    label_comisionados.grid(row=new_row + 4, column=0, sticky="w")
+    entry_comisionados.grid(row=new_row + 4, column=1, sticky="ew")
+    procesar_comisionados_button.grid(row=new_row + 5, column=1, sticky="ew")
+    label_hora.grid(row=new_row + 6, column=0, sticky="w")
+    combobox_hora.grid(row=new_row + 6, column=1, sticky="ew")
+    label_habilitacion.grid(row=new_row + 7, column=0, sticky="w")
+    sin_horas_button.grid(row=new_row + 7, column=1, sticky="w")
+    con_horas_button.grid(row=new_row + 7, column=1, sticky="w", padx=100)
+    label_termino.grid(row=new_row + 8, column=0, sticky="w")
+    termino_combobox.grid(row=new_row + 8, column=1, sticky="ew")
+    label_orden.grid(row=new_row + 9, column=0, sticky="w")
+    frame_orden.grid(row=new_row + 9, column=1, sticky="ew")
+    label_encabezado.grid(row=new_row + 10, column=0, sticky="w")
+    encabezado_combo.grid(row=new_row + 10, column=1, sticky="ew")
 
 def mostrar_ocultar_campos(*args):
     global crppa_active
@@ -1072,7 +1158,8 @@ notebook = ttk.Notebook(right_frame)
 notebook.pack(fill=tk.BOTH, expand=True)
 decreto_tab = tk.Frame(notebook)
 notebook.add(decreto_tab, text="Decreto")
-template_display = tk.Text(decreto_tab, wrap=tk.WORD, font=("Times New Roman", 13))
+initialize_fonts()
+template_display = tk.Text(decreto_tab, wrap=tk.WORD, font=base_font)
 template_display.pack(fill=tk.BOTH, expand=True)
 create_tags(template_display)
 template_display.config(state=tk.DISABLED)
@@ -1081,12 +1168,18 @@ template_display.config(yscrollcommand=decreto_scrollbar.set)
 decreto_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 copiar_decreto_button = tk.Button(decreto_tab, text="Copiar Decreto al Portapapeles", command=lambda: copiar_al_portapapeles(template_display))
 copiar_decreto_button.pack(pady=10)
+control_frame = tk.Frame(decreto_tab)
+control_frame.pack(pady=5)
+zoom_label = tk.Label(control_frame, text="", font=("Times New Roman", 11))
+zoom_label.pack(side=tk.LEFT, padx=5)
+template_display.bind("<Control-MouseWheel>", on_ctrl_mousewheel)
 
 domicilio_tab_1 = tk.Frame(notebook)
 notebook.add(domicilio_tab_1, text="Domicilio 1")
-domicilio_display_1 = tk.Text(domicilio_tab_1, wrap=tk.WORD, font=("Times New Roman", 13))
+domicilio_display_1 = tk.Text(domicilio_tab_1, wrap=tk.WORD, font=base_font)
 domicilio_display_1.pack(fill=tk.BOTH, expand=True)
 create_tags(domicilio_display_1)
+domicilio_display_1.bind("<Control-MouseWheel>", on_ctrl_mousewheel)
 
 initial_template = f"""
 Córdoba, [fecha]
@@ -1186,42 +1279,50 @@ detencion_sin.grid(row=13, column=1, sticky="w")
 detencion_con = tk.Radiobutton(left_scrollable_frame, text="Con", variable=detencion_var, value="con", command=update_detencion)
 detencion_con.grid(row=13, column=1, sticky="w", padx=100)
 
+label_apertura_compulsiva = tk.Label(left_scrollable_frame, text="Apertura compulsiva:")
+label_apertura_compulsiva.grid(row=14, column=0, sticky="w")
+apertura_compulsiva_var = tk.StringVar(value="No")
+apertura_no = tk.Radiobutton(left_scrollable_frame, text="No", variable=apertura_compulsiva_var, value="No", command=update_template)
+apertura_no.grid(row=14, column=1, sticky="w")
+apertura_si = tk.Radiobutton(left_scrollable_frame, text="Sí", variable=apertura_compulsiva_var, value="Sí", command=update_template)
+apertura_si.grid(row=14, column=1, sticky="w", padx=100)
+
 label_comisionados = tk.Label(left_scrollable_frame, text="Comisionados:")
-label_comisionados.grid(row=14, column=0, sticky="w")
+label_comisionados.grid(row=15, column=0, sticky="w")
 entry_comisionados = tk.Entry(left_scrollable_frame, width=60)
-entry_comisionados.grid(row=14, column=1, sticky="ew")
+entry_comisionados.grid(row=15, column=1, sticky="ew")
 entry_comisionados.bind("<KeyRelease>", lambda e: (update_template(), validar_campos()))
 procesar_comisionados_button = tk.Button(left_scrollable_frame, text="Comisionados en minúscula", command=procesar_comisionados)
-procesar_comisionados_button.grid(row=15, column=1, sticky="ew")
+procesar_comisionados_button.grid(row=16, column=1, sticky="ew")
 
 horas_24 = [f"{h:02d}:{m:02d}" for h in range(24) for m in range(0, 60, 30)]
 label_hora = tk.Label(left_scrollable_frame, text="Hora (formato 00:00):")
-label_hora.grid(row=16, column=0, sticky="w")
+label_hora.grid(row=17, column=0, sticky="w")
 hora_var = tk.StringVar()
 combobox_hora = ttk.Combobox(left_scrollable_frame, textvariable=hora_var, values=horas_24, state='readonly', width=57)
-combobox_hora.grid(row=16, column=1, sticky="ew")
+combobox_hora.grid(row=17, column=1, sticky="ew")
 combobox_hora.bind("<<ComboboxSelected>>", lambda e: (update_template(), validar_campos()))
 
 label_habilitacion = tk.Label(left_scrollable_frame, text="Habilitación de horas:")
-label_habilitacion.grid(row=17, column=0, sticky="w")
+label_habilitacion.grid(row=18, column=0, sticky="w")
 habilitacion_var = tk.StringVar(value="SIN")
 sin_horas_button = tk.Radiobutton(left_scrollable_frame, text="SIN", variable=habilitacion_var, value="SIN", command=update_template)
-sin_horas_button.grid(row=17, column=1, sticky="w")
+sin_horas_button.grid(row=18, column=1, sticky="w")
 con_horas_button = tk.Radiobutton(left_scrollable_frame, text="CON", variable=habilitacion_var, value="CON", command=update_template)
-con_horas_button.grid(row=17, column=1, sticky="w", padx=100)
+con_horas_button.grid(row=18, column=1, sticky="w", padx=100)
 
 label_termino = tk.Label(left_scrollable_frame, text="Término:")
-label_termino.grid(row=18, column=0, sticky="w")
+label_termino.grid(row=19, column=0, sticky="w")
 termino_var = tk.StringVar(value="veinticuatro horas")
 termino_combobox = ttk.Combobox(left_scrollable_frame, textvariable=termino_var, state='readonly', width=57)
 termino_combobox['values'] = ["veinticuatro horas", "cuarenta y ocho horas", "setenta y dos horas"]
-termino_combobox.grid(row=18, column=1, sticky="ew")
+termino_combobox.grid(row=19, column=1, sticky="ew")
 termino_combobox.bind("<<ComboboxSelected>>", lambda e: update_template())
 
 label_orden = tk.Label(left_scrollable_frame, text="Serie y Número de orden:")
-label_orden.grid(row=19, column=0, sticky="w")
+label_orden.grid(row=20, column=0, sticky="w")
 frame_orden = tk.Frame(left_scrollable_frame)
-frame_orden.grid(row=19, column=1, sticky="ew")
+frame_orden.grid(row=20, column=1, sticky="ew")
 entry_serie_orden = tk.Entry(frame_orden, width=5)
 entry_serie_orden.pack(side=tk.LEFT, padx=(0, 10))
 entry_serie_orden.insert(0, "A")
@@ -1231,7 +1332,7 @@ entry_serie_orden.bind("<KeyRelease>", lambda e: (update_template(), validar_cam
 entry_numero_orden_inicial.bind("<KeyRelease>", lambda e: (update_template(), validar_campos()))
 
 label_encabezado = tk.Label(left_scrollable_frame, text="Encabezado de oficios:")
-label_encabezado.grid(row=20, column=0, sticky="w")
+label_encabezado.grid(row=21, column=0, sticky="w")
 
 encabezado_var = tk.StringVar()
 encabezado_combo = ttk.Combobox(left_scrollable_frame, textvariable=encabezado_var, state='readonly', width=57)
@@ -1241,7 +1342,7 @@ encabezado_combo['values'] = [
     "AL SEÑOR JEFE \nDE LA FUERZA POLICIAL \nANTINARCOTRÁFICO"
 ]
 encabezado_combo.current(0)
-encabezado_combo.grid(row=20, column=1, sticky="ew")
+encabezado_combo.grid(row=21, column=1, sticky="ew")
 encabezado_combo.bind("<<ComboboxSelected>>", lambda e: update_template())
 
 copiar_decreto_button.config(state=tk.DISABLED)  # Deshabilitado hasta que se completen los campos
